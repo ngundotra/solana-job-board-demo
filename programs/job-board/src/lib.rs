@@ -234,7 +234,7 @@ pub struct CloseBounty<'info> {
     pub token_mint: Account<'info, Mint>,
     #[account(mut)]
     pub sponsor_token_account: Account<'info, TokenAccount>,
-    /// CHECK: the account to recieve the funds
+    /// CHECK: who the bounty was posted for
     pub recipient: AccountInfo<'info>,
     #[account(
         mut,
@@ -515,20 +515,26 @@ pub mod job_board {
         let spl_token = &ctx.accounts.spl_token;
 
         // Transfer tokens out
+        let bump_seed = *ctx.bumps.get("bounty").unwrap();
         transfer(
-            CpiContext::new(
+            CpiContext::new_with_signer(
                 spl_token.to_account_info(),
                 Transfer {
                     from: bounty_ata.to_account_info(),
                     to: sponsor_token_account.to_account_info(),
                     authority: bounty.to_account_info(),
                 },
+                &[&[
+                    &BOUNTY_PREFIX.as_bytes(),
+                    &sponsor.key.as_ref(),
+                    &recipient.key.as_ref(),
+                    &[bump_seed],
+                ]],
             ),
             bounty_ata.amount,
         )?;
 
         // Close bounty ata
-        let bump_seed = *ctx.bumps.get("bounty").unwrap();
         close_account(CpiContext::new_with_signer(
             spl_token.to_account_info(),
             CloseAccount {
@@ -547,8 +553,7 @@ pub mod job_board {
         // Close bounty
         let bounty_ai = bounty.to_account_info();
         let dest_lamports = sponsor.lamports();
-        **recipient.lamports.borrow_mut() =
-            bounty_ai.lamports().checked_add(dest_lamports).unwrap();
+        **sponsor.lamports.borrow_mut() = bounty_ai.lamports().checked_add(dest_lamports).unwrap();
         **bounty_ai.lamports.borrow_mut() = 0;
 
         let mut bounty_data = bounty_ai.try_borrow_mut_data()?;

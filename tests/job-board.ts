@@ -13,6 +13,7 @@ import {
 
 import {
   createAssociatedTokenAccount,
+  createAssociatedTokenAccountInstruction,
   createMint,
   createMintToInstruction,
   getAssociatedTokenAddressSync,
@@ -64,7 +65,7 @@ describe("job-board", () => {
   const globalAuth = getGlobalAuth(program.programId);
   console.log(`Global auth: ${globalAuth.toString()}`)
 
-  it("Is initialized!", async () => {
+  it("e2e tests", async () => {
     // Add your test here.
     const space = getConcurrentMerkleTreeAccountSize(20, 64);
     let txId = await program.methods
@@ -107,17 +108,21 @@ describe("job-board", () => {
     const mintToIx = createMintToInstruction(tokenMint, sponsorAta, payer, 10);
     let tx = new Transaction().add(mintToIx);
     txId = await sendAndConfirmTransaction(connection, tx, [payerKp])
-    console.log("Your transaction signature", txId);
+    console.log("Created test mint", txId);
 
     const recipientKp = Keypair.generate();
     const recipient = recipientKp.publicKey;
 
     const bounty = getBounty(sponsor, recipient, program.programId);
-    const bountyAta = await createAssociatedTokenAccount(connection, payerKp, tokenMint, recipient, {
-      commitment: "confirmed"
-    })
+    const bountyAta = getAssociatedTokenAddressSync(tokenMint, bounty, true,);
+    const initBountyAta = createAssociatedTokenAccountInstruction(
+      payer,
+      bountyAta,
+      bounty,
+      tokenMint
+    )
 
-    let txInfo = await program
+    txId = await program
       .methods
       .createBounty(new BN(0), new BN(5))
       .accounts({
@@ -129,9 +134,26 @@ describe("job-board", () => {
         bountyAta,
         splToken: TOKEN_PROGRAM_ID,
       })
-      .signers([sponsorKp])
+      .signers([sponsorKp, payerKp])
+      .preInstructions([initBountyAta])
       .rpc({ skipPreflight: true });
-    console.log("Your transaction signature", txInfo);
+    console.log("Created bounty", txId);
+
+    txId = await program
+      .methods
+      .closeBounty()
+      .accounts({
+        tokenMint,
+        sponsor: sponsor,
+        sponsorTokenAccount: sponsorAta,
+        recipient,
+        bounty,
+        bountyAta,
+        splToken: TOKEN_PROGRAM_ID,
+      })
+      .signers([sponsorKp])
+      .rpc({ skipPreflight: false })
+    console.log("Closed bounty:", txId);
 
   });
 });
