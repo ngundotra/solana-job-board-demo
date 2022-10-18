@@ -16,4 +16,8 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.25.0"
+anchor-spl = "0.25.0"
+anchor-lang = { version = "0.25.0", features=[] }
+spl-account-compression = { version = "0.1.3", features=["cpi"] }
+spl-noop = { version = "0.1.3", features = ["cpi"] }
+spl-concurrent-merkle-tree = "0.1.1"

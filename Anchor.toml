@@ -1,8 +1,16 @@
 [features]
 seeds = false
 skip-lint = false
+
 [programs.localnet]
 job_board = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+
+[test.validator]
+url = "https://api.mainnet-beta.solana.com"
+[[test.validator.clone]]
+address = "cmtDvXumGCrqC1Age74AVPhSRVXJMd8PJS91L8KbNCK"
+[[test.validator.clone]]
+address = "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV"
 
 [registry]
 url = "https://api.apr.dev"
